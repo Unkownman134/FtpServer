@@ -1,3 +1,5 @@
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -25,5 +27,19 @@ public class FtpServer {
     }
 
     private void start() {
+        try (ServerSocket serverSocket = new ServerSocket(CONTROL_PORT)) {
+            while (true) {
+                // 一直等待，直到有客户端请求连接
+                Socket clientSocket = serverSocket.accept();
+
+                // TODO: 为每个新连接的客户端创建一个 FtpClientHandler 实例
+                // clientThreadPool.submit(new FtpClientHandler(clientSocket));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            // 关闭线程池以释放资源
+            clientThreadPool.shutdown();
+        }
     }
 }
