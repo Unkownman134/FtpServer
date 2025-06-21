@@ -32,8 +32,8 @@ public class FtpServer {
                 // 一直等待，直到有客户端请求连接
                 Socket clientSocket = serverSocket.accept();
 
-                // TODO: 为每个新连接的客户端创建一个 FtpClientHandler 实例
-                // clientThreadPool.submit(new FtpClientHandler(clientSocket));
+                // 为每个新连接的客户端创建一个 FtpClientHandler 实例
+                 clientThreadPool.submit(new FtpClientHandler(clientSocket));
             }
         } catch (Exception e) {
             e.printStackTrace();
