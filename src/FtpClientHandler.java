@@ -152,9 +152,36 @@ public class FtpClientHandler implements Runnable {
             case "RNTO":
                 handleRNTO(argument);
                 break;
+            case "SIZE":
+                handleSIZE(argument);
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
+        }
+    }
+
+    /**
+     * 处理SIZE命令，获取文件大小。
+     * @param filename 要查询大小的文件名
+     */
+    private void handleSIZE(String filename) {
+        if (!isAuthenticated) {
+            sendReply(530, "未登录。");
+            return;
+        }
+
+        Path filePath = currentDirectory.resolve(filename).normalize();
+
+        try {
+            if (!Files.exists(filePath) || Files.isDirectory(filePath)) {
+                sendReply(550, "文件未找到或它是一个目录。");
+                return;
+            }
+            long size = Files.size(filePath);
+            sendReply(213, String.valueOf(size));
+        } catch (IOException e) {
+            sendReply(550, "获取文件大小失败：" + e.getMessage());
         }
     }
 
