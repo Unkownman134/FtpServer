@@ -1,4 +1,6 @@
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -18,6 +20,8 @@ public class FtpDataConnectionManager {
 
     // 连接超时时间
     private static final int DATA_CONNECTION_TIMEOUT_MS = 10000;
+    // 缓冲区大小
+    private static final int TRANSFER_BUFFER_SIZE = 4096;
 
     /**
      * 构造函数。
@@ -120,6 +124,24 @@ public class FtpDataConnectionManager {
                     e.printStackTrace();
                 }
             });
+        }
+    }
+
+    /**
+     * 将指定文件的内容通过数据连接发送给客户端
+     * @param dataSocket 已建立的数据连接Socket
+     * @param filePath 要传输的文件的路径
+     * @throws IOException 如果读写文件或网络传输时发生IO错误
+     */
+    public void writeFileContent(Socket dataSocket, Path filePath) throws IOException {
+        try (InputStream fileIn = Files.newInputStream(filePath);
+             OutputStream dataOut = dataSocket.getOutputStream()) {
+
+            byte[] buffer = new byte[TRANSFER_BUFFER_SIZE];
+            int bytesRead;
+            while ((bytesRead = fileIn.read(buffer)) != -1) {
+                dataOut.write(buffer, 0, bytesRead);
+            }
         }
     }
 }
