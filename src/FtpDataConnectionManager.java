@@ -1,7 +1,12 @@
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class FtpDataConnectionManager {
     // 数据传输模式
@@ -84,5 +89,37 @@ public class FtpDataConnectionManager {
         }
         // 不支持的模式
         return null;
+    }
+
+    /**
+     * 将格式化的文件列表写入到数据连接中。
+     * @param dataSocket 已建立的数据连接Socket
+     * @param currentDirectory 需要列出内容的目录路径
+     * @throws IOException 如果写入数据时发生IO错误
+     */
+    public void writeFileList(Socket dataSocket, Path currentDirectory) throws IOException {
+        try (PrintWriter dataWriter = new PrintWriter(dataSocket.getOutputStream(), true)) {
+            // 遍历当前目录下的所有文件和子目录
+            Files.list(currentDirectory).forEach(path -> {
+                try {
+                    // 根据文件类型设置权限字符串：目录为drwxr-xr-x，文件为-rw-r--r--
+                    String permissions = Files.isDirectory(path) ? "drwxr-xr-x" : "-rw-r--r--";
+                    String owner = "ftp";
+                    String group = "ftp";
+                    // 获取文件大小，如果是目录则大小为0
+                    long size = Files.isDirectory(path) ? 0 : Files.size(path);
+                    // 格式化文件的最后修改时间
+                    SimpleDateFormat sdf = new SimpleDateFormat("MMM dd HH:mm", java.util.Locale.ENGLISH);
+                    String date = sdf.format(new Date(Files.getLastModifiedTime(path).toMillis()));
+                    // 获取文件或目录的名称
+                    String name = path.getFileName().toString();
+
+                    // 格式化输出字符串，遵循FTP LIST命令的标准格式
+                    dataWriter.println(String.format("%s 1 %s %s %10d %s %s", permissions, owner, group, size, date, name));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+        }
     }
 }
