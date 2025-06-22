@@ -128,9 +128,50 @@ public class FtpClientHandler implements Runnable {
             case "RETR":
                 handleRETR(argument);
                 break;
+            case "STOR":
+                handleSTOR(argument);
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
+        }
+    }
+
+    /**
+     * 处理STOR命令，接收客户端上传的文件并写入到服务器。
+     * @param filename 客户端请求上传的文件名
+     */
+    private void handleSTOR(String filename) {
+        if (!isAuthenticated) {
+            sendReply(530, "未登录。");
+            return;
+        }
+
+        Path filePath = currentDirectory.resolve(filename).normalize();
+
+        // 检查父目录是否存在且是目录，并且可写
+        if (filePath.getParent() == null || !Files.exists(filePath.getParent()) || !Files.isDirectory(filePath.getParent()) || !Files.isWritable(filePath.getParent())) {
+            sendReply(550, "权限不足或上传路径无效。");
+            return;
+        }
+
+        try {
+            sendReply(150, "正在打开二进制模式数据连接，用于写入文件 " + filename + "。");
+            Socket dataSocket = dataConnectionManager.createDataSocket();
+            if (dataSocket == null) {
+                sendReply(425, "无法打开数据连接。");
+                return;
+            }
+
+            try {
+                // 通过管理器读取数据并写入文件
+                dataConnectionManager.writeFileToPath(dataSocket, filePath);
+                sendReply(226, "传输完成。");
+            } finally {
+                dataSocket.close();
+            }
+        } catch (IOException e) {
+            sendReply(550, "存储文件失败：" + e.getMessage());
         }
     }
 
