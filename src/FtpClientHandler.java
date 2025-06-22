@@ -64,7 +64,7 @@ public class FtpClientHandler implements Runnable {
     public void run() {
         try {
             // 发送欢迎消息
-            sendReply(220, "服务就绪，等待新用户连接。");
+            sendReply(220, "Service ready for new user.");
 
             String line;
             // 持续从客户端读取命令，直到连接断开或发生错误
@@ -658,7 +658,7 @@ public class FtpClientHandler implements Runnable {
      */
     private void handleOPTS(String argument) {
         if (argument.equalsIgnoreCase("UTF8 ON")) {
-            sendReply(200, "UTF8 命令成功。");
+            sendReply(200, "UTF8 command successful.");
         } else {
             sendReply(501, "参数或语法错误（不支持的OPTS参数）。");
         }
