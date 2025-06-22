@@ -7,6 +7,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class FtpClientHandler implements Runnable {
     // 用于控制连接的Socket
@@ -155,9 +157,38 @@ public class FtpClientHandler implements Runnable {
             case "SIZE":
                 handleSIZE(argument);
                 break;
+            case "MDTM":
+                handleMDTM(argument);
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
+        }
+    }
+
+    /**
+     * 处理MDTM命令，获取文件的最后修改时间。
+     * @param filename 要查询修改时间的文件名
+     */
+    private void handleMDTM(String filename) {
+        if (!isAuthenticated) {
+            sendReply(530, "未登录。");
+            return;
+        }
+
+        Path filePath = currentDirectory.resolve(filename).normalize();
+
+        try {
+            if (!Files.exists(filePath) || Files.isDirectory(filePath)) {
+                sendReply(550, "文件未找到或它是一个目录。");
+                return;
+            }
+            // 获取文件的最后修改时间并格式化
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+            String modificationTime = sdf.format(new Date(Files.getLastModifiedTime(filePath).toMillis()));
+            sendReply(213, modificationTime);
+        } catch (IOException e) {
+            sendReply(550, "获取修改时间失败：" + e.getMessage());
         }
     }
 
