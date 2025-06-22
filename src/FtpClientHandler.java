@@ -3,6 +3,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class FtpClientHandler implements Runnable {
     // 用于控制连接的Socket
@@ -16,6 +18,9 @@ public class FtpClientHandler implements Runnable {
     private String username;
     // 用户是否已认证
     private boolean isAuthenticated;
+    // 当前客户端的虚拟工作目录
+    private Path currentDirectory;
+
 
     private UserAuthenticator userAuthenticator;
 
@@ -26,6 +31,8 @@ public class FtpClientHandler implements Runnable {
     public FtpClientHandler(Socket clientSocket) {
         this.controlSocket = clientSocket;
         this.isAuthenticated = false;
+        // 初始工作目录
+        this.currentDirectory = Paths.get(System.getProperty("user.dir"));
 
         this.userAuthenticator = new UserAuthenticator();
 
@@ -94,10 +101,26 @@ public class FtpClientHandler implements Runnable {
             case "OPTS":
                 handleOPTS(argument);
                 break;
+            case "PWD":
+                handlePWD();
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
         }
+    }
+
+    /**
+     * 处理PWD命令。
+     * 该命令用于向客户端返回当前用户在服务器上的虚拟工作目录的绝对路径。
+     * 需要用户已登录才能执行。
+     */
+    private void handlePWD() {
+        if (!isAuthenticated) {
+            sendReply(530, "未登录。");
+            return;
+        }
+        sendReply(257, "\"" + currentDirectory.toAbsolutePath().normalize().toString().replace("\\", "/") + "\" 是当前目录。");
     }
 
     /**
