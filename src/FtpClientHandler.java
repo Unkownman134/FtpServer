@@ -125,9 +125,53 @@ public class FtpClientHandler implements Runnable {
             case "LIST":
                 handleLIST();
                 break;
+            case "RETR":
+                handleRETR(argument);
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
+        }
+    }
+
+    /**
+     * 处理RETR命令。
+     * 该命令用于从服务器下载指定文件到客户端。
+     * 文件数据通过数据连接传输。
+     * 需要用户已登录才能执行。
+     * @param filename 客户端请求下载的文件名
+     */
+    private void handleRETR(String filename) {
+        if (!isAuthenticated) {
+            sendReply(530, "未登录。");
+            return;
+        }
+        Path filePath = currentDirectory.resolve(filename).normalize();
+
+        if (!Files.exists(filePath) || Files.isDirectory(filePath)) {
+            sendReply(550, "文件未找到或不是一个常规文件。");
+            return;
+        }
+
+        try {
+            long fileSize = Files.size(filePath);
+            sendReply(150, "正在打开二进制模式数据连接，用于文件 " + filename + "（" + fileSize + " 字节）。");
+            // 通过管理器创建数据Socket
+            Socket dataSocket = dataConnectionManager.createDataSocket();
+            if (dataSocket == null) {
+                sendReply(425, "无法打开数据连接。");
+                return;
+            }
+
+            try {
+                // 通过管理器写入文件内容
+                dataConnectionManager.writeFileContent(dataSocket, filePath);
+                sendReply(226, "传输完成。");
+            } finally {
+                dataSocket.close();
+            }
+        } catch (IOException e) {
+            sendReply(550, "检索文件失败：" + e.getMessage());
         }
     }
 
