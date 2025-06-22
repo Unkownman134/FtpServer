@@ -24,6 +24,7 @@ public class FtpClientHandler implements Runnable {
 
 
     private UserAuthenticator userAuthenticator;
+    private FtpDataConnectionManager dataConnectionManager;
 
     /**
      * 构造函数
@@ -36,6 +37,7 @@ public class FtpClientHandler implements Runnable {
         this.currentDirectory = Paths.get(System.getProperty("user.dir"));
 
         this.userAuthenticator = new UserAuthenticator();
+        this.dataConnectionManager = new FtpDataConnectionManager();
 
         try {
             this.reader = new BufferedReader(new InputStreamReader(controlSocket.getInputStream()));
@@ -111,9 +113,42 @@ public class FtpClientHandler implements Runnable {
             case "TYPE":
                 handleTYPE(argument);
                 break;
+            case "PORT":
+                handlePORT(argument);
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
+        }
+    }
+
+    /**
+     * 处理PORT命令。
+     * 该命令用于在主动模式下设置数据连接的IP地址和端口号。
+     * 客户端会指定一个IP地址和端口，服务器将尝试连接到该地址和端口以建立数据连接。
+     * @param arg 客户端提供的PORT命令参数，格式为 h1,h2,h3,h4,p1,p2，其中h1-h4是IP地址，p1和p2用于计算端口号
+     */
+    private void handlePORT(String arg) {
+        if (!isAuthenticated) {
+            sendReply(530, "未登录。");
+            return;
+        }
+        try {
+            String[] parts = arg.split(",");
+            if (parts.length != 6) {
+                sendReply(501, "参数或语法错误。");
+                return;
+            }
+            String host = String.join(".", parts[0], parts[1], parts[2], parts[3]);
+            int port = Integer.parseInt(parts[4]) * 256 + Integer.parseInt(parts[5]);
+            // 使用管理器设置模式
+            dataConnectionManager.setPortMode(host, port);
+            sendReply(200, "PORT 命令成功。数据连接参数已接收。");
+        }
+        catch (NumberFormatException e) {
+            sendReply(501, "参数或语法错误（端口格式）。");
+        } catch (Exception e) {
+            sendReply(501, "参数或语法错误。");
         }
     }
 
