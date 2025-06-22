@@ -91,9 +91,25 @@ public class FtpClientHandler implements Runnable {
                 sendReply(211, "支持的扩展：");
                 sendReply(211, "结束");
                 break;
+            case "OPTS":
+                handleOPTS(argument);
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
+        }
+    }
+
+    /**
+     * 处理OPTS命令。
+     * 该命令用于设置或查询服务器的特定选项。
+     * @param argument OPTS命令的参数
+     */
+    private void handleOPTS(String argument) {
+        if (argument.equalsIgnoreCase("UTF8 ON")) {
+            sendReply(200, "UTF8 命令成功。");
+        } else {
+            sendReply(501, "参数或语法错误（不支持的OPTS参数）。");
         }
     }
 
