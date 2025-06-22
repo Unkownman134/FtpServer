@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 public class FtpClientHandler implements Runnable {
     // 用于控制连接的Socket
@@ -148,9 +149,56 @@ public class FtpClientHandler implements Runnable {
             case "RNFR":
                 handleRNFR(argument);
                 break;
+            case "RNTO":
+                handleRNTO(argument);
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
+        }
+    }
+
+    /**
+     * 处理RNTO命令，指定重命名后的目标文件或目录。
+     * @param pathname 重命名后的目标文件或目录的路径
+     */
+    private void handleRNTO(String pathname) {
+        if (!isAuthenticated) {
+            sendReply(530, "未登录。");
+            return;
+        }
+
+        if (this.renameFromPath == null) {
+            sendReply(503, "命令序列错误。未执行 RNFR 命令。");
+            return;
+        }
+
+        Path destinationPath = currentDirectory.resolve(pathname).normalize();
+
+        try {
+            // 检查目标路径的父目录是否存在且可写
+            if (destinationPath.getParent() == null || !Files.exists(destinationPath.getParent()) || !Files.isDirectory(destinationPath.getParent()) || !Files.isWritable(destinationPath.getParent())) {
+                sendReply(550, "权限不足或目标路径无效。");
+                // 清除暂存的路径
+                this.renameFromPath = null;
+                return;
+            }
+
+            // 如果目标文件/目录已存在，重命名操作默认会失败。
+            if (Files.exists(destinationPath)) {
+                sendReply(550, "目标文件或目录已存在。");
+                this.renameFromPath = null;
+                return;
+            }
+
+            // 执行重命名操作
+            Files.move(this.renameFromPath, destinationPath, StandardCopyOption.ATOMIC_MOVE);
+            sendReply(250, "请求的文件操作成功，已完成。");
+        } catch (IOException e) {
+            sendReply(550, "重命名文件或目录失败：" + e.getMessage());
+        } finally {
+            // 无论成功失败，都清除暂存的路径
+            this.renameFromPath = null;
         }
     }
 
