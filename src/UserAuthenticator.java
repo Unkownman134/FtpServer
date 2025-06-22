@@ -44,4 +44,19 @@ public class UserAuthenticator {
 
         return users.containsKey(username);
     }
+
+    /**
+     * 验证提供的用户名和密码是否匹配
+     * @param username 需要验证的用户名
+     * @param password 需要验证的密码
+     * @return 如果用户名和密码都有效，则返回true，否则返回false。
+     */
+    public boolean authenticate(String username, String password) {
+        if (username == null || password == null) {
+            return false;
+        }
+        // 从Properties对象中获取对应用户名的密码并进行比较。
+        String storedPassword = users.getProperty(username);
+        return storedPassword != null && storedPassword.equals(password);
+    }
 }
