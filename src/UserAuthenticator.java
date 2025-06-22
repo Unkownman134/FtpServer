@@ -31,4 +31,17 @@ public class UserAuthenticator {
             e.printStackTrace();
         }
     }
+
+    /**
+     * 检查用户名是否存在
+     * @param username 需要检查的用户名
+     * @return 如果用户名存在，则返回true，否则返回false
+     */
+    public boolean isUsernameValid(String username) {
+        if (username == null || username.isEmpty()) {
+            return false;
+        }
+
+        return users.containsKey(username);
+    }
 }
