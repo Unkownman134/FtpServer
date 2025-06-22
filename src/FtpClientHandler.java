@@ -14,6 +14,8 @@ public class FtpClientHandler implements Runnable {
 
     // 当前登录的用户名
     private String username;
+    // 用户是否已认证
+    private boolean isAuthenticated;
 
     private UserAuthenticator userAuthenticator;
 
@@ -23,6 +25,7 @@ public class FtpClientHandler implements Runnable {
      */
     public FtpClientHandler(Socket clientSocket) {
         this.controlSocket = clientSocket;
+        this.isAuthenticated = false;
 
         this.userAuthenticator = new UserAuthenticator();
 
@@ -75,9 +78,26 @@ public class FtpClientHandler implements Runnable {
             case "USER":
                 handleUSER(argument);
                 break;
+            case "PASS":
+                handlePASS(argument);
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
+        }
+    }
+
+    /**
+     * 处理PASS命令。
+     * @param password 客户端提供的密码
+     */
+    private void handlePASS(String password) {
+        if (!isAuthenticated && username != null && userAuthenticator.authenticate(username, password)) {
+            isAuthenticated = true;
+            sendReply(230, "用户 " + username + " 已登录。");
+        } else {
+            isAuthenticated = false;
+            sendReply(530, "未登录。用户名或密码不正确。");
         }
     }
 
