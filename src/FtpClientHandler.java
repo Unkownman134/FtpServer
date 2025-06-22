@@ -3,6 +3,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -104,9 +105,32 @@ public class FtpClientHandler implements Runnable {
             case "PWD":
                 handlePWD();
                 break;
+            case "CWD":
+                handleCWD(argument);
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
+        }
+    }
+
+    /**
+     * 处理CWD命令。
+     * 该命令用于更改客户端在服务器上的当前虚拟工作目录。
+     * 需要用户已登录才能执行。
+     * @param path 客户端请求更改的目标目录路径
+     */
+    private void handleCWD(String path) {
+        if (!isAuthenticated) {
+            sendReply(530, "未登录。");
+            return;
+        }
+        Path newPath = currentDirectory.resolve(path).normalize();
+        if (Files.exists(newPath) && Files.isDirectory(newPath)) {
+            currentDirectory = newPath;
+            sendReply(250, "目录已成功更改为 " + currentDirectory.toAbsolutePath().normalize().toString().replace("\\", "/") + "。");
+        } else {
+            sendReply(550, "更改目录失败。目录未找到或不可访问。");
         }
     }
 
