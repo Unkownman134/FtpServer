@@ -21,6 +21,8 @@ public class FtpClientHandler implements Runnable {
     private boolean isAuthenticated;
     // 当前客户端的虚拟工作目录
     private Path currentDirectory;
+    // 用于暂存RNFR命令的源路径
+    private Path renameFromPath;
 
 
     private UserAuthenticator userAuthenticator;
@@ -35,6 +37,7 @@ public class FtpClientHandler implements Runnable {
         this.isAuthenticated = false;
         // 初始工作目录
         this.currentDirectory = Paths.get(System.getProperty("user.dir"));
+        this.renameFromPath = null;
 
         this.userAuthenticator = new UserAuthenticator();
         this.dataConnectionManager = new FtpDataConnectionManager();
@@ -142,10 +145,44 @@ public class FtpClientHandler implements Runnable {
             case "XRMD":
                 handleRMD(argument);
                 break;
+            case "RNFR":
+                handleRNFR(argument);
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
         }
+    }
+
+    /**
+     * 处理RNFR命令，指定要重命名的源文件或目录。
+     * @param pathname 要重命名的源文件或目录的路径
+     */
+    private void handleRNFR(String pathname) {
+        if (!isAuthenticated) {
+            sendReply(530, "未登录。");
+            return;
+        }
+
+        Path sourcePath = currentDirectory.resolve(pathname).normalize();
+
+        if (!Files.exists(sourcePath)) {
+            sendReply(550, "文件或目录未找到。");
+            // 清除暂存的路径
+            this.renameFromPath = null;
+            return;
+        }
+
+        // 检查读取权限，确保有权限访问源文件/目录
+        if (!Files.isReadable(sourcePath)) {
+            sendReply(550, "访问源文件/目录权限被拒绝。");
+            this.renameFromPath = null;
+            return;
+        }
+
+        // 暂存源路径
+        this.renameFromPath = sourcePath;
+        sendReply(350, "请求的文件操作正在等待进一步信息。");
     }
 
     /**
