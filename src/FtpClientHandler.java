@@ -138,9 +138,52 @@ public class FtpClientHandler implements Runnable {
             case "XMKD":
                 handleMKD(argument);
                 break;
+            case "RMD":
+            case "XRMD":
+                handleRMD(argument);
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
+        }
+    }
+
+    /**
+     * 处理RMD命令，删除服务器上的空目录。
+     * @param directoryName 要删除的目录名
+     */
+    private void handleRMD(String directoryName) {
+        if (!isAuthenticated) {
+            sendReply(530, "未登录。");
+            return;
+        }
+
+        Path directoryPath = currentDirectory.resolve(directoryName).normalize();
+
+        try {
+            // 检查目录是否存在且是目录
+            if (!Files.exists(directoryPath) || !Files.isDirectory(directoryPath)) {
+                sendReply(550, "目录未找到或它是一个文件。");
+                return;
+            }
+
+            // 检查目录是否为空
+            if (Files.list(directoryPath).findAny().isPresent()) {
+                sendReply(550, "目录不为空。");
+                return;
+            }
+
+            // 检查是否有写入权限
+            if (!Files.isWritable(directoryPath.getParent())) {
+                sendReply(550, "删除目录权限被拒绝。");
+                return;
+            }
+
+            // 删除空目录
+            Files.delete(directoryPath);
+            sendReply(250, "请求的文件操作成功，已完成。目录 " + directoryName + " 已删除。");
+        } catch (IOException e) {
+            sendReply(550, "删除目录失败：" + e.getMessage());
         }
     }
 
