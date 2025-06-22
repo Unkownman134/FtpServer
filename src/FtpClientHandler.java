@@ -87,6 +87,10 @@ public class FtpClientHandler implements Runnable {
             case "SYST":
                 sendReply(215, "UNIX 类型: L8");
                 break;
+            case "FEAT":
+                sendReply(211, "支持的扩展：");
+                sendReply(211, "结束");
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
