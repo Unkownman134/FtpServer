@@ -131,9 +131,45 @@ public class FtpClientHandler implements Runnable {
             case "STOR":
                 handleSTOR(argument);
                 break;
+            case "DELE":
+                handleDELE(argument);
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
+        }
+    }
+
+    /**
+     * 处理DELE命令，删除服务器上的指定文件。
+     * @param filename 要删除的文件名。
+     */
+    private void handleDELE(String filename) {
+        if (!isAuthenticated) {
+            sendReply(530, "未登录。");
+            return;
+        }
+
+        Path filePath = currentDirectory.resolve(filename).normalize();
+
+        try {
+            // 检查文件是否存在且是一个常规文件（不能删除目录）
+            if (!Files.exists(filePath) || Files.isDirectory(filePath)) {
+                sendReply(550, "文件未找到或它是一个目录。");
+                return;
+            }
+
+            // 检查是否有写入权限
+            if (!Files.isWritable(filePath.getParent())) {
+                sendReply(550, "删除文件权限被拒绝。");
+                return;
+            }
+
+            // 执行删除操作
+            Files.delete(filePath);
+            sendReply(250, "请求的文件操作成功，已完成。文件 " + filename + " 已删除。");
+        } catch (IOException e) {
+            sendReply(550, "删除文件失败：" + e.getMessage());
         }
     }
 
