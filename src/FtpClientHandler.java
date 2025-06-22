@@ -122,9 +122,44 @@ public class FtpClientHandler implements Runnable {
             case "EPRT":
                 handleEPRT(argument);
                 break;
+            case "LIST":
+                handleLIST();
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
+        }
+    }
+
+    /**
+     * 处理LIST命令。
+     * 该命令用于获取当前工作目录或指定目录的文件和子目录列表。
+     * 数据列表通过数据连接传输给客户端。
+     * 需要用户已登录才能执行。
+     */
+    private void handleLIST() {
+        if (!isAuthenticated) {
+            sendReply(530, "未登录。");
+            return;
+        }
+        try {
+            sendReply(150, "正在打开 ASCII 模式数据连接以获取文件列表。");
+            // 通过管理器创建数据Socket
+            Socket dataSocket = dataConnectionManager.createDataSocket();
+            if (dataSocket == null) {
+                sendReply(425, "无法打开数据连接。");
+                return;
+            }
+
+            try {
+                // 通过管理器写入文件列表
+                dataConnectionManager.writeFileList(dataSocket, currentDirectory);
+                sendReply(226, "传输完成。");
+            } finally {
+                dataSocket.close();
+            }
+        } catch (IOException e) {
+            sendReply(425, "无法打开数据连接。" + e.getMessage());
         }
     }
 
