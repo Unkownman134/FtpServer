@@ -81,9 +81,24 @@ public class FtpClientHandler implements Runnable {
             case "PASS":
                 handlePASS(argument);
                 break;
+            case "QUIT":
+                handleQUIT();
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
+        }
+    }
+
+    /**
+     * 处理QUIT命令。
+     */
+    private void handleQUIT() {
+        sendReply(221, "再见。");
+        try {
+            controlSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
