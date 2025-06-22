@@ -119,9 +119,53 @@ public class FtpClientHandler implements Runnable {
             case "PASV":
                 handlePASV();
                 break;
+            case "EPRT":
+                handleEPRT(argument);
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
+        }
+    }
+
+    /**
+     * 处理EPRT命令。
+     * 这是PORT命令的扩展版本，支持IPv6地址，并使用更灵活的参数格式。
+     * 客户端告知服务器其数据连接的IP地址和端口号，服务器将尝试连接到该地址和端口。
+     * 需要用户已登录才能执行。
+     * @param arg 客户端提供的EPRT命令参数，格式通常为|网络协议|主机地址|端口|。
+     */
+    private void handleEPRT(String arg) {
+        if (!isAuthenticated) {
+            sendReply(530, "未登录。");
+            return;
+        }
+        try {
+            String[] parts = arg.substring(1, arg.length() - 1).split("\\|");
+            if (parts.length != 3) {
+                sendReply(501, "参数或语法错误。");
+                return;
+            }
+            String networkProtocol = parts[0];
+            String hostAddress = parts[1];
+            int port = Integer.parseInt(parts[2]);
+
+            // 1代表IPv4, 2代表IPv6
+            if (!networkProtocol.equals("2") && !networkProtocol.equals("1")) {
+                sendReply(522, "不支持的网络协议，请使用 AF_INET 或 AF_INET6。");
+                return;
+            }
+
+            // EPRT 也是一种主动模式，使用管理器设置
+            dataConnectionManager.setPortMode(hostAddress, port);
+            sendReply(200, "EPRT 命令成功。数据连接参数已接收。");
+        } catch (NumberFormatException e) {
+            sendReply(501, "参数或语法错误（端口格式）。");
+        } catch (StringIndexOutOfBoundsException | ArrayIndexOutOfBoundsException e) {
+            sendReply(501, "参数或语法错误（EPRT 格式）。");
+        } catch (Exception e) {
+            sendReply(501, "参数或语法错误：" + e.getMessage());
+            e.printStackTrace();
         }
     }
 
