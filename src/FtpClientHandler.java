@@ -116,9 +116,36 @@ public class FtpClientHandler implements Runnable {
             case "PORT":
                 handlePORT(argument);
                 break;
+            case "PASV":
+                handlePASV();
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
+        }
+    }
+
+    /**
+     * 处理PASV命令。
+     * 该命令用于在被动模式下建立数据连接。
+     * 服务器会开启一个临时端口，并将其IP地址和端口信息告知客户端，客户端随后连接此端口。
+     * 需要用户已登录才能执行。
+     */
+    private void handlePASV() {
+        if (!isAuthenticated) {
+            sendReply(530, "未登录。");
+            return;
+        }
+        try {
+            // 使用管理器设置模式并获取端口
+            int port = dataConnectionManager.setPasvMode();
+            String ipAddress = controlSocket.getLocalAddress().getHostAddress();
+            String[] ipParts = ipAddress.split("\\.");
+            int p1 = port / 256;
+            int p2 = port % 256;
+            sendReply(227, "进入被动模式 (" + String.join(",", ipParts) + "," + p1 + "," + p2 + ")。");
+        } catch (IOException e) {
+            sendReply(421, "服务不可用，无法打开数据连接。");
         }
     }
 
