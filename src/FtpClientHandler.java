@@ -108,9 +108,27 @@ public class FtpClientHandler implements Runnable {
             case "CWD":
                 handleCWD(argument);
                 break;
+            case "TYPE":
+                handleTYPE(argument);
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
+        }
+    }
+
+    /**
+     * 处理TYPE命令。
+     * 该命令用于设置数据传输类型，常见的有ASCII模式（'A'）和二进制模式（'I'）。
+     * @param type 客户端请求设置的数据传输类型，通常是"A"或"I"
+     */
+    private void handleTYPE(String type) {
+        if (type.equalsIgnoreCase("A")) {
+            sendReply(200, "类型已设置为 ASCII。");
+        } else if (type.equalsIgnoreCase("I")) {
+            sendReply(200, "类型已设置为二进制。");
+        } else {
+            sendReply(504, "该参数的命令未实现。");
         }
     }
 
