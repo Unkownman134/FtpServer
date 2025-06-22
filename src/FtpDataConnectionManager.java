@@ -144,4 +144,22 @@ public class FtpDataConnectionManager {
             }
         }
     }
+
+    /**
+     * 从数据连接中读取数据并写入到本地文件
+     * @param dataSocket 已建立的数据连接Socket
+     * @param filePath 要写入的本地文件的路径
+     * @throws IOException 如果读写文件或网络传输时发生IO错误
+     */
+    public void writeFileToPath(Socket dataSocket, Path filePath) throws IOException {
+        try (InputStream dataIn = dataSocket.getInputStream();
+             OutputStream fileOut = Files.newOutputStream(filePath)) {
+
+            byte[] buffer = new byte[TRANSFER_BUFFER_SIZE];
+            int bytesRead;
+            while ((bytesRead = dataIn.read(buffer)) != -1) {
+                fileOut.write(buffer, 0, bytesRead);
+            }
+        }
+    }
 }
