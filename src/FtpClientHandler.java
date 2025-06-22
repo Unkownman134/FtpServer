@@ -134,11 +134,49 @@ public class FtpClientHandler implements Runnable {
             case "DELE":
                 handleDELE(argument);
                 break;
+            case "MKD":
+            case "XMKD":
+                handleMKD(argument);
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
         }
     }
+
+    /**
+     * 处理MKD命令，在服务器上创建新目录。
+     * @param directoryName 要创建的目录名。
+     */
+    private void handleMKD(String directoryName) {
+        if (!isAuthenticated) {
+            sendReply(530, "未登录。");
+            return;
+        }
+
+        Path newDirectoryPath = currentDirectory.resolve(directoryName).normalize();
+
+        try {
+            // 检查父目录是否存在且可写
+            if (newDirectoryPath.getParent() == null || !Files.exists(newDirectoryPath.getParent()) || !Files.isDirectory(newDirectoryPath.getParent()) || !Files.isWritable(newDirectoryPath.getParent())) {
+                sendReply(550, "权限不足或目录创建路径无效。");
+                return;
+            }
+
+            // 检查目录是否已经存在
+            if (Files.exists(newDirectoryPath)) {
+                sendReply(550, "目录已存在。");
+                return;
+            }
+
+            // 创建新目录
+            Files.createDirectory(newDirectoryPath);
+            sendReply(257, "\"" + newDirectoryPath.toAbsolutePath().normalize().toString().replace("\\", "/") + "\" 已创建。");
+        } catch (IOException e) {
+            sendReply(550, "创建目录失败：" + e.getMessage());
+        }
+    }
+
 
     /**
      * 处理DELE命令，删除服务器上的指定文件。
