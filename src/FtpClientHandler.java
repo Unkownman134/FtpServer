@@ -12,12 +12,19 @@ public class FtpClientHandler implements Runnable {
     // 向控制连接发送服务器响应的写入器
     private PrintWriter writer;
 
+    // 当前登录的用户名
+    private String username;
+
+    private UserAuthenticator userAuthenticator;
+
     /**
      * 构造函数
      * @param clientSocket 代表该客户端的控制连接
      */
     public FtpClientHandler(Socket clientSocket) {
         this.controlSocket = clientSocket;
+
+        this.userAuthenticator = new UserAuthenticator();
 
         try {
             this.reader = new BufferedReader(new InputStreamReader(controlSocket.getInputStream()));
@@ -65,9 +72,28 @@ public class FtpClientHandler implements Runnable {
         String argument = parts.length > 1 ? parts[1] : "";
 
         switch (command) {
+            case "USER":
+                handleUSER(argument);
+                break;
             default:
                 sendReply(502, "命令未实现。");
                 break;
+        }
+    }
+
+    /**
+     * 处理USER命令。
+     * @param user 客户端提供的用户名
+     */
+    private void handleUSER(String user) {
+        this.username = user;
+        boolean isValid = userAuthenticator.isUsernameValid(username);
+
+        // 检查用户名是否存在
+        if (isValid) {
+            sendReply(331, "用户 " + username + " 需要密码。");
+        } else {
+            sendReply(530, "未登录。用户名无效。");
         }
     }
 
